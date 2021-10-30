@@ -1,0 +1,30 @@
+Package: FieldReadiness
+Title: A Markov decision process (MDP) used for scheduling
+    tillage operations
+Version: 1.0
+Authors@R: 
+    person(given = "Parisa",
+           family = "Bagheri Tookanlou",
+           role = c("aut", "cre"),
+           email = "pbagheri@eng.au.dk")
+Description: This packgae includes codes and data to model
+    scheduling of tillage operations using MDP.
+License: GPL (>3)
+Imports: 
+    discretizeGaussian,
+    httr,
+    jsonlite,
+    MASS,
+    MDP2,
+    Rcpp (>= 0.11.1),
+    RcppArmadillo (>= 0.7.400.2),
+    RDaisy,
+    processx,
+    data.table
+LinkingTo: 
+    Rcpp,
+    RcppArmadillo
+Encoding: UTF-8
+LazyData: TRUE
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.1.1
