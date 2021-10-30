@@ -1,0 +1,662 @@
+#---------------------------------------------------------------------------------------------------------
+
+# This file contains the user-defined functions applied in FieldReadiness package
+
+#---------------------------------------------------------------------------------------------------------
+#' Creating a list of historical and forecasting weather Data as an input argument for running Daisy App.
+#'
+#' @param t_count The time period of observing weather data
+#' @param param Parameter values given in R function \code{setParam}
+#' @param HistMetData1 The hiatorical weather data
+#' @param HistMetData2 The historical weather data during growing cycle
+#' @param PredMetData The prediction or simulater weather data during growing cycle
+#'
+#' @return A list containing weather information we need to run Daisy
+#' @export
+WeatherInfo <- function(t_count, param, HistMetData1, HistMetData2, PredMetData) {
+
+  datetime <- as.matrix(HistMetData1[,1])
+  Temperature <- as.matrix(HistMetData1[,2])
+  WindSpeed <- as.matrix(HistMetData1[,5])
+  Precipitation <- as.matrix(HistMetData1[,6])
+  GlobalRadiation <- as.matrix(HistMetData1[,7])
+
+  if(t_count>1){
+    datetime_H <- as.matrix(HistMetData2[1:(t_count-1),]$Dato)
+    datetime <- rbind(datetime, datetime_H)
+
+    Temperature_H <- as.matrix(HistMetData2[1:(t_count-1),]$Temp)
+    Temperature <- rbind(Temperature,Temperature_H)
+
+    Precipitation_H <- as.matrix(HistMetData2[1:(t_count-1),]$Prec.B)
+    Precipitation <- rbind(Precipitation,Precipitation_H)
+
+    GlobalRadiation_H <- as.matrix(HistMetData2[1:(t_count-1),]$W.m2)
+    GlobalRadiation <- rbind(GlobalRadiation,GlobalRadiation_H)
+
+    WindSpeed_H <- as.matrix(HistMetData2[1:(t_count-1),]$WV2)
+    WindSpeed <- rbind(WindSpeed,WindSpeed_H)
+
+  }
+
+#  datetime_F <- as.matrix(PredMetData[t_count:(t_count+param$tMax+1),]$Date)
+   datetime_F <- as.matrix(PredMetData[t_count:(t_count+4),]$Date)
+   datetime <- rbind(datetime, datetime_F)
+
+#  Temperature_F <- as.matrix(PredMetData[t_count:(t_count+param$tMax+1),]$Temperature)
+   Temperature_F <- as.matrix(PredMetData[t_count:(t_count+4),]$Temperature)
+   Temperature <- rbind(Temperature,Temperature_F)
+
+#  Precipitation_F <- as.matrix(PredMetData[t_count:(t_count+param$tMax+1),]$Precipitation)
+   Precipitation_F <- as.matrix(PredMetData[t_count:(t_count+4),]$Precipitation)
+   Precipitation <- rbind(Precipitation,Precipitation_F)
+
+#  GlobalRadiation_F <- as.matrix(PredMetData[t_count:(t_count+param$tMax+1),]$GlobalRadiation)
+   GlobalRadiation_F <- as.matrix(PredMetData[t_count:(t_count+4),]$GlobalRadiation)
+   GlobalRadiation <- rbind(GlobalRadiation,GlobalRadiation_F)
+
+#  WindSpeed_F <- as.matrix(PredMetData[t_count:(t_count+param$tMax+1),]$WindSpeed)
+   WindSpeed_F <- as.matrix(PredMetData[t_count:(t_count+4),]$WindSpeed)
+   WindSpeed <- rbind(WindSpeed,WindSpeed_F)
+
+  WeatherData <- list()
+
+  WeatherData$datetime<- datetime
+  WeatherData$Temperature <- Temperature
+  WeatherData$Precipitation <- Precipitation
+  WeatherData$GlobalRadiation <- GlobalRadiation
+  WeatherData$WindSpeed <- WindSpeed
+
+  return(WeatherData)
+}
+
+#---------------------------------------------------------------------------------------------------------
+#' Creating a .dwf file to run Dasiy
+#'
+#' @param WeatherData The weather information as inputs for building a .dwf file to run Daisy App.
+#'
+#' @export
+#' @return  A .dwf file as an input for Daisy
+DWF_File <- function(WeatherData) {
+
+  dato <- as.matrix(WeatherData$datetime)
+  datetime <- matrix(nrow= length(dato), ncol=1)
+  for (i in 1:length(dato)){
+    if (class(dato[i]) == "numeric") {
+      datetime[i] <- paste(as.Date(dato[i],origin = "1970-01-01"))
+    }else{
+      datetime <- WeatherData$datetime
+    }
+  }
+
+  Temperature <- as.matrix(as.numeric(WeatherData$Temperature))
+  Precipitation <- as.matrix(as.numeric(WeatherData$Precipitation))
+  GlobalRadiation <- as.matrix(as.numeric(WeatherData$GlobalRadiation))
+  WindSpeed <- as.matrix(as.numeric(WeatherData$WindSpeed))
+
+  # Creating a .dwf file
+  file.create("DaisyWeatherFile_2012_2016.dwf")
+
+  # Writing information in the .dwf file created
+  fileCon <- file(description = "DaisyWeatherFile_2012_2016.dwf", open = "w+")
+  if (class(dato[1]) == "numeric"){
+    cat("dwf-0.0 \n\nStation:\tfoulum\nElevation:\t53 m\nLongitude:\t9 dgEast\nLatitude:\t56 dgNorth\nTimeZone:\t15 dgEast\nSurface:\treference\nScreenHeight:\t2.0 m\n", paste("Begin:\t", as.Date(as.character(head(datetime[1,], n=1))), sep = ""),"\n", paste("End:\t", as.Date(as.character(tail(datetime, n=1))), sep = ""),"\nTimestep:\t24 hours\nNH4WetDep:\t0.9 ppm\nNH4DryDep:\t2.2 kgN/ha/year\nNO3WetDep:\t0.6 ppm\nNO3DryDep:\t1.1 kgN/ha/year\n",paste("TAverage:\t",round(mean(Temperature[,1], na.rm=TRUE), digits = 1), sep = "", " dgC\n"),"MaxTDay:\t209 yday\n",paste("TAmplitude:\t", max(Temperature[,1], na.rm = TRUE), sep = "", " dgC"), file="DaisyWeatherFile_2012_2016.dwf", sep = "")
+  } else{
+    cat("dwf-0.0 \n\nStation:\tfoulum\nElevation:\t53 m\nLongitude:\t9 dgEast\nLatitude:\t56 dgNorth\nTimeZone:\t15 dgEast\nSurface:\treference\nScreenHeight:\t2.0 m\nBegin:\t2012-01-02\n", paste("End:\t", as.Date(as.character(tail(datetime, n=1)), "%m/%d/%Y"), sep = ""),"\nTimestep:\t24 hours\nNH4WetDep:\t0.9 ppm\nNH4DryDep:\t2.2 kgN/ha/year\nNO3WetDep:\t0.6 ppm\nNO3DryDep:\t1.1 kgN/ha/year\n",paste("TAverage:\t",round(mean(Temperature[,1], na.rm=TRUE), digits = 1), sep = "", " dgC\n"),"MaxTDay:\t209 yday\n",paste("TAmplitude:\t", max(Temperature[,1], na.rm = TRUE), sep = "", " dgC"), file="DaisyWeatherFile_2012_2016.dwf", sep = "")
+  }
+  cat("\n\n\n",rep("-", 100), file ="DaisyWeatherFile_2012_2016.dwf", sep = "", append = TRUE)
+  cat("\n",file ="DaisyWeatherFile_2012_2016.dwf", append = TRUE)
+  cat("Year","\tMonth","\tDay","\tPrecip","\tGlobRad","\tAirTemp","\tWind", fill = TRUE, file ="DaisyWeatherFile_2012_2016.dwf", append = TRUE, sep = "")
+  cat("year","\tmonth","\tmday","\tmm/d","\tW/m^2","\tdgC","\tm/s", fill = TRUE, file ="DaisyWeatherFile_2012_2016.dwf" ,append = TRUE, sep = "")
+
+  dim <- nrow(datetime)
+  for (i in 1:dim) {
+    if (class(dato[1]) == "numeric"){
+      dm <- as.Date(datetime[i,])
+    } else {
+      dm <- as.Date(datetime[i,], "%m/%d/%Y")
+    }
+    Year <- as.numeric(format(dm, "%Y"))
+    Month <- as.numeric(format(dm, "%m"))
+    Day <- as.numeric(format(dm, "%d"))
+    AirTemp <- Temperature[i,]
+    Precip <- Precipitation[i,]
+    GlobRad <- GlobalRadiation[i,]
+    Wind <- WindSpeed[i,]
+    cat(Year, Month, Day,  Precip, GlobRad, AirTemp, Wind, fill = TRUE, file ="DaisyWeatherFile_2012_2016.dwf", sep = "\t", append = TRUE)
+  }
+
+  # Showing and closing the .dwf file created
+  file.show("DaisyWeatherFile_2012_2016.dwf")
+  close(fileCon)
+
+  # Copying and pastinng the .dwf file from the current working directory to the directory where Daisy is running
+  file.copy(from="C:/Users/au520279/Documents/FieldReadiness/paper/DaisyWeatherFile_2012_2016.dwf", to="C:/Users/au520279/Desktop/DAISY", overwrite = TRUE, recursive = FALSE, copy.mode = TRUE)
+}
+
+#---------------------------------------------------------------------------------------------------------
+#' Running Dasiy App. to estimate and forecast the soil water content and matric water potential
+#'
+#' @param WeatherData The weather information
+#'
+#' @return Estimation and forecasting of soil water content(kg/kg) and matric potential water(log(h))
+#' @export
+Daisy <- function(WeatherData){
+
+# rstudioapi::openProject(path = "C:/Users/au520279/Desktop/DAISY", newSession = TRUE)
+# navigateToFile("C:/Users/au520279/Desktop/DAISY/Run_Daisy.R")
+
+# daisyfile <- as.matrix(readLines(con = "C:/Users/au520279/Documents/FieldReadiness/DAISY/FieldReadiness_ver1_25102019.dai", n=-1L))
+  daisyfile <- as.matrix(readLines(con = "C:/Users/au520279/Desktop/DAISY/FieldReadiness_ver1_26082021.dai", n=-1L))
+
+  x=dim(as.matrix(WeatherData$datetime))[1]-2
+
+  if (class(WeatherData$datetime[1]) == "numeric") {
+    Start_Date <- paste(as.Date((WeatherData$datetime[2]), origin = "1970-01-01"))
+    End_Date<- paste(as.Date((WeatherData$datetime[x]), origin = "1970-01-01"))
+  }
+
+  if (class(WeatherData$datetime[1]) == "character"){
+    Start_Date <- paste( as.Date((WeatherData$datetime[2]), "%m/%d/%Y"), sep = "")
+    End_Date<- paste( as.Date(as.character(WeatherData$datetime[x]), "%m/%d/%Y"), sep = "")
+  }
+
+  daisyfile[137,] <- paste("(time ", format(as.Date(Start_Date,format="%Y-%m-%d"),"%Y"),format(as.Date(Start_Date,format="%Y-%m-%d"),"%m"),format(as.Date(Start_Date,format="%Y-%m-%d"),"%d"), sep = " ", ")")
+  daisyfile[138,] <- paste("(stop ", format(as.Date(End_Date,format="%Y-%m-%d"),"%Y"),format(as.Date(End_Date,format="%Y-%m-%d"),"%m"),format(as.Date(End_Date,format="%Y-%m-%d"),"%d"), sep = " ", ")")
+
+  writeLines(daisyfile,"C:/Users/au520279/Desktop/DAISY/FieldReadiness_ver1_26082021.dai")
+
+  source("C:/Users/au520279/Desktop/DAISY/Run_Daisy.R")
+
+  # RunFile="C:/Users/au520279/Desktop/DAISY/FieldReadiness_ver1_25102019_02.dai"
+  # PathToDaisy = "C:/Program Files (x86)/Daisy 5.92/bin/daisy.exe"
+  # runDaisy(RunFile=RunFile, showLogFile = TRUE, PathToDaisy = PathToDaisy)
+
+  soil_water_content <- read.table(file = "C:/Users/au520279/Desktop/DAISY/soil_water_content.dlf", fill = TRUE, header = TRUE, skip = 14, sep = "\t", dec = ".")
+  colnames(soil_water_content) <- c("year","month","mday", "hour", "Theta @ -1.25", "Theta @ -3.75", "Theta @ -7.5","Theta @ -15","Theta @ -25",	"Theta @ -35","Theta @ -45","Theta @ -55","Theta @ -65","Theta @ -75","Theta @ -85","Theta @ -95",	"Theta @ -105",	"Theta @ -115",	"Theta @ -125",	"Theta @ -135",	"Theta @ -145")
+  soil_water_content <- subset(soil_water_content, select = c("year","month","mday", "hour", "Theta @ -1.25", "Theta @ -3.75", "Theta @ -7.5","Theta @ -15","Theta @ -25",	"Theta @ -35","Theta @ -45","Theta @ -55","Theta @ -65","Theta @ -75","Theta @ -85","Theta @ -95",	"Theta @ -105",	"Theta @ -115",	"Theta @ -125",	"Theta @ -135",	"Theta @ -145"))
+  write.csv(soil_water_content, file = "C:/Users/au520279/Desktop/DAISY/soil_water_content.csv", row.names = FALSE)
+
+  matric_water_potential <- read.table(file = "C:/Users/au520279/Desktop/DAISY/soil_water_pF.dlf", fill = TRUE, header = TRUE, skip = 14, sep = "\t", dec = ".")
+  colnames(matric_water_potential) <- c("year","month","mday", "hour", "Theta @ -1.25", "Theta @ -3.75", "Theta @ -7.5","Theta @ -15","Theta @ -25",	"Theta @ -35","Theta @ -45","Theta @ -55","Theta @ -65","Theta @ -75","Theta @ -85","Theta @ -95",	"Theta @ -105",	"Theta @ -115",	"Theta @ -125",	"Theta @ -135",	"Theta @ -145")
+  matric_water_potential <- subset(matric_water_potential, select = c("year","month","mday", "hour", "Theta @ -1.25", "Theta @ -3.75", "Theta @ -7.5","Theta @ -15","Theta @ -25",	"Theta @ -35","Theta @ -45","Theta @ -55","Theta @ -65","Theta @ -75","Theta @ -85","Theta @ -95",	"Theta @ -105",	"Theta @ -115",	"Theta @ -125",	"Theta @ -135",	"Theta @ -145"))
+  write.csv(matric_water_potential, file = "C:/Users/au520279/Desktop/DAISY/matric_water_potential.csv", row.names = FALSE)
+
+  DaisyOutputs <- list()
+  DaisyOutputs$soil_water_content <- soil_water_content
+  DaisyOutputs$matric_water_potential<- matric_water_potential
+
+  return(DaisyOutputs)
+}
+
+#---------------------------------------------------------------------------------------------------------
+#' Means of Daisy outputs
+#'
+#' @param DaisyOutputs Obtained outputs from Daisy model
+#'
+#' @return Means of soil water content and matric water potential
+#' @export
+Mean_Daisy <- function(DaisyOutputs){
+
+  tMax=14
+
+  Mean_SoilWaterContent<- as.data.frame(matrix(nrow = nrow(DaisyOutputs$soil_water_content)-1, ncol = 2))
+  colnames(Mean_SoilWaterContent) <- c("Date", "AvgMois")
+
+  Mean_MatricWaterPotential <- as.data.frame(matrix(nrow = nrow(DaisyOutputs$matric_water_potential)-1, ncol = 2))
+  colnames(Mean_MatricWaterPotential) <- c("Date", "AvgMatric")
+
+  for(i in 2:nrow(DaisyOutputs$soil_water_content)){
+    year <- DaisyOutputs$soil_water_content[i,1]
+    month <- DaisyOutputs$soil_water_content[i,2]
+    day <- DaisyOutputs$soil_water_content[i,3]
+    date <- paste(year,month,day, sep = "-")
+    Mean_SoilWaterContent[i-1,1] <-date
+    Mean_SoilWaterContent[i-1,2] <- mean(as.matrix(DaisyOutputs$soil_water_content[i,5:8]))
+  }
+
+  for(i in 2:nrow(DaisyOutputs$matric_water_potential)){
+
+    year <- DaisyOutputs$matric_water_potential[i,1]
+    month <- DaisyOutputs$matric_water_potential[i,2]
+    day <- DaisyOutputs$matric_water_potential[i,3]
+    date <- paste(year,month,day, sep = "-")
+    Mean_MatricWaterPotential[i-1,1] <- date
+    Mean_MatricWaterPotential[i-1,2] <- mean(as.numeric(as.matrix(DaisyOutputs$matric_water_potential[i,5:12])))
+  }
+
+  matric_water_potential_hPa <- as.data.frame(matrix(nrow = nrow(DaisyOutputs$matric_water_potential)-1, ncol = 18))
+  colnames(matric_water_potential_hPa) <- c("Date", "h @ -1.25", "h @ -3.75",	"h @ -7.5",	"h @ -15",	"h @ -25",	"h @ -35",	"h @ -45",	"h @ -55", "h @ -65","h @ -75","h @ -85","h @ -95",	"h @ -105",	"h @ -115",	"h @ -125",	"h @ -135",	"h @ -145")
+
+  for (i in 2:nrow(DaisyOutputs$matric_water_potential)){
+
+    year <- DaisyOutputs$matric_water_potential[i,1]
+    month <- DaisyOutputs$matric_water_potential[i,2]
+    day <- DaisyOutputs$matric_water_potential[i,3]
+    date <- paste(year,month,day,sep = "-")
+    matric_water_potential_hPa$Date[i-1] <- date
+
+    for (j in 5:ncol(DaisyOutputs$matric_water_potential)){
+      b <-as.matrix(DaisyOutputs$matric_water_potential[i,j])  # pF value from Daisy
+      h <- 10^(as.numeric(b[1]))                               # Soil Matric Potential in hPa unit
+      matric_water_potential_hPa[i-1,j-3]<- h
+    }
+  }
+
+  Mean_MatricWaterPotential_hPa<- as.data.frame( matrix(nrow = nrow(matric_water_potential_hPa), ncol = 2))  # A matrix contains the average of matric water potential at each date from different layers
+  colnames(Mean_MatricWaterPotential_hPa) <- c("Date", "AvgMatric_hPa")
+
+  # Calculating the average of matric water potential(hPa) from different layers
+  for (k in 1:nrow(matric_water_potential_hPa)){
+    Mean_MatricWaterPotential_hPa$Date[k] <- matric_water_potential_hPa[k,1]
+    Mean_MatricWaterPotential_hPa$AvgMatric_hPa[k] <- mean(as.matrix(matric_water_potential_hPa[k, 2:9]))
+  }
+
+  length <- nrow(Mean_SoilWaterContent)
+  Mean_DaisyOutputs <- list()
+
+  SoilWaterContent <- Mean_SoilWaterContent[length-tMax,2]                       # Soil water content at time t
+  MatricWaterPotential <- Mean_MatricWaterPotential[length-tMax,2]               # Matric water potential (cm3/cm3) at time t
+  MatricWaterPotential_hPa <- Mean_MatricWaterPotential_hPa[length-tMax,2]       # Matric water potential (hPa) at time t
+
+  Mean_DaisyOutputs$SoilWaterContent <- SoilWaterContent
+  Mean_DaisyOutputs$MatricWaterPotential <- MatricWaterPotential
+  Mean_DaisyOutputs$MatricWaterPotential_hPa <- MatricWaterPotential_hPa
+
+  Mean_DaisyOutputs$Mean_SoilWaterContent <- Mean_SoilWaterContent                     # Soil water content from 2012 to the end of period cycle in 2016
+  Mean_DaisyOutputs$Mean_MatricWaterPotential <- Mean_MatricWaterPotential             # Matric water potential (cm3/cm3) from 2012 to the end of period cycle in 2016
+  Mean_DaisyOutputs$Mean_MatricWaterPotential_hPa <- Mean_MatricWaterPotential_hPa     # Matric water potential (hPa) from 2012 to the end of period cycle in 2016
+
+  return(Mean_DaisyOutputs)
+}
+
+#---------------------------------------------------------------------------------------------------------
+#' Running Terranimo.world App. to calculate Soil Compaction Index(SCI)
+#'
+#' @param  disAvgMat Soil water content
+#'
+#' @return Soil compaction index of the soil at time t for different layers
+#' @export
+Terranimo_SCI <- function(disAvgMat){
+
+  h_cbar <- as.character(disAvgMat/10)
+  token <- "Bearer TSAPI5508a002c9a94ba784b9556adf311dcb56a78bf337234810b88d753b415f7796"
+  body <- '{\"soilTypeUID\":\"tw_sandy_loam\",\"wetness\":5,\"tyreUID\":\"traction_michelin_axiobib_65085r38_179_d\",\"load\":3.00,\"pressure\":1.5}'
+  SCI <- httr::POST("https://services.terranimo.world/api/v1/calculations/calculate_sci",httr::content_type("application/json"),httr::add_headers(Authorization=token),body = gsub(":5", paste(":", h_cbar, sep = ""), body))  # Remember load in tons and pressure in bar, see Terranimo.world, the Light version for testing/align output
+  SCIout <- as.data.frame(jsonlite::fromJSON(content(SCI,"text"), flatten = TRUE))
+
+  return (SCIout)
+}
+
+#---------------------------------------------------------------------------------------------------------
+#' Soil water content based on weather information initialized by centerpoints in cycling time
+#'
+#' @param  Mois_WedcentrePoints Soil water contents based on centerpoints defined for weather information
+#' @param  wed_data A data frame consists of all combinations of weather information centerpoints
+#' @param  disTem_val Temperature data determined by centerpoints for the temperature
+#' @param  disPre_val Precipitation data determined by centerpoints for the precipitation
+#' @param  disGR_val  Global Radiation data determined by centerpoint for the global radiation
+#' @param  disWind_val Wind Speed data determined by centerpoint for the wind speed
+#'
+#' @return Soil water content based on weather information initialized by centerpoints in cycling time
+#' @export
+Hydro <- function(Mois_WedcentrePoints, wed_data, disTem_val, disPre_val, disGR_val, disWind_val){
+
+  disTem_val=round(disTem_val, digits = 1)
+  disPre_val=round(disPre_val, digits = 1)
+  disGR_val=round(disGR_val, digits = 1)
+  disWind_val=round(disWind_val, digits = 1)
+
+  for (i in 1:(dim(wed_data)[1])){
+    if (round(wed_data[i,2], digits = 1)==disTem_val && round(wed_data[i,3], digits = 1)==disPre_val && round(wed_data[i,4], digits = 1)==disGR_val && round(wed_data[i,5], digits = 1)==disWind_val){
+      rowi = i
+    }
+  }
+
+  Mois <- Mois_WedcentrePoints[rowi,2]
+  return(Mois)
+}
+
+#---------------------------------------------------------------------------------------------------------
+#' Set the parameters of the Gaussian SSM.
+#'
+#' @param param Parameter values given in R function \code{setParam}
+#' @param t Time period of observing sensor data
+#' @param GG design matrix of observation equation.
+#' @param V Observation variance of the nGSSM
+#' @param W System variance of the nGSSM (optional values)
+#' @param m0 Initial mean of posterior distribution at the insertion time (t=0)
+#' @param C0 Initial variance of posterior distribution at the insertion time (t=0)
+#'
+#' @return A list containing the parameters of the GSSM.
+#' @export
+setModel<-function(param,t,GG,V,W,m0,C0){
+
+  model<-list(t=param$tMax)
+  model$GG<-1
+  model$W<-param$gSSMW
+  model$V<-param$gSSMV
+  model$m0<-param$gSSMm0
+  model$C0<-param$gSSMc0
+  return(model)
+}
+
+#----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#' Gaussian SSM filtering
+#'
+#' @param mod set of parameters needed in the GSSM model.
+#' @param param Parameter values given in R function \code{setParam}
+#' @param W System variance of the GSSM.
+#' @param V Observation variance of the GSSM.
+#' @param soilWatObs A list contains of Means of soil water content.
+#' @param soilWatTrue A list contains of Means of soil water content.
+#'
+#' @return Updated information of filtering.
+#' @export
+DLMfilter<-function(param,mod,soilWatObs,soilWatTrue,W,V){
+
+  # The means of posterior
+  L1<-c()
+  # The variance matrices of posterior
+  L2<-c()
+  # The variance matrices of prior
+  Rt<-c()
+  # Mean values of posterior
+  meanPos<-c()
+  # Variance values of posterior
+  varPos<-c()
+
+  soilWatTrue <- as.matrix(soilWatTrue)
+  soilWatObs <- as.matrix(soilWatObs)
+
+  for(i in 1:mod$t){
+    #Prior
+    if(i==1){
+      at<-mod$GG * mod$m0
+      meanPos[i]<-at
+      Rt[i]<-mod$GG * mod$C0 * mod$GG + W
+      FF<-as.numeric(soilWatTrue[i])
+    }
+    else{
+      at<-mod$GG * L1[i-1]
+      meanPos[i]<-at
+      Rt[i]<-mod$GG * L2[i-1] * mod$GG + W
+      FF<- as.numeric(soilWatTrue[i])
+    }
+    # One step forcast
+    ft<-FF * at
+    Qt<- FF * Rt[i] * FF + V
+
+    #Posterior (we see y_t here)
+    At<-Rt[i] * FF / Qt
+    et<-as.numeric(soilWatObs[i])-ft
+    ct<-Rt[i] - At * Qt * At
+    varPos[i]<-ct
+    L1[i]<-at + At * et
+    L2[i]<-Rt[i] - At * Qt * At
+
+  }
+  dlm<-list()
+  dlm$L1<-L1
+  dlm$L2<-L2
+  dlm$Rt<-Rt
+  dlm$meanPos<-meanPos
+  dlm$varPos<-varPos
+  return(dlm)
+}
+
+#----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#' Gaussian SSM smoothing
+#'
+#' @param mod set of parameters needed in the GSSM model.
+#' @param fdlm1 output information of filtering the GSSM using the function DLMfilter.
+#' @param W System variance of the GSSM.
+#'
+#' @return Updated information of smoothing
+#' @export
+Smoother<-function(mod,fdlm1,W){
+  mts<-array(NA,dim=mod$t)
+  Cts<-array(NA,dim=mod$t)
+  Bt<-array(NA,dim=mod$t)
+
+  mt<-fdlm1$L1
+  Ct<-fdlm1$L2
+  Rt<-fdlm1$Rt
+
+  mts[mod$t]<-mt[mod$t]
+  Cts[mod$t]<-Ct[mod$t]
+
+  for(i in ((mod$t-1):1)){
+    Bt[i]<-Ct[i] * mod$GG / Rt[i+1]
+    mts[i]<-mt[i] + Bt[i] * mts[i+1] - mod$GG * mt[i]
+    Cts[i]<-Ct[i] + Bt[i] * (Cts[i+1] - Rt[i+1]) * Bt[i]
+  }
+
+  #for t=0
+  Bt0<-mod$C0 * mod$GG / (mod$GG * mod$C0 * mod$GG + W)
+  mts0<-mod$m0 + Bt0 * (mts[1] - mod$GG * mod$m0)
+  Cts0<-mod$C0 + Bt0 * (Cts[1] - Rt[1]) * t(Bt0)
+
+  smo<-list()
+  smo$mts<-mts
+  smo$Cts<-Cts
+  smo$mts0<-mts0
+  smo$Cts0<-Cts0
+
+  return(smo)
+}
+
+#----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#' EM algorithm for estimation of system variance in Gaussian SSM
+#'
+#' @param mod Set of parameters needed in the GSSM model.
+#' @param fdlm1 Output information of filtering the GSSM using the function DLMfilter.
+#' @param sdlm1 Output information of smoothing the GSSM using the function Smoother.
+#' @param Wm Updated system variance of the GSSM.
+#'
+#' @return Updated information of system variance W
+#' @export
+EM<-function(mod,fdlm1,sdlm1,Wm){
+  Bt<-array(NA,dim=mod$t)
+  Lt<-array(NA,dim=mod$t)
+  W1<-0
+  V1<-0
+  result<-list()
+
+  mt<-fdlm1$L1
+  Ct<-fdlm1$L2
+  mts<-sdlm1$mts
+  Cts<-sdlm1$Cts
+  mts0<-sdlm1$mts0
+  Cts0<-sdlm1$Cts0
+
+  for(i in 1:mod$t){
+    if(i==1){
+      Bt0<-mod$C0 * mod$GG / (mod$GG * mod$C0 * mod$GG + Wm)
+      Lt[i]<-Cts[i] + mod$GG * Cts0 * mod$GG - Cts[i] * Bt0 - Bt0 * Cts[i]
+      W1<-Lt[i]+(mts[i] - mod$GG * mts0) * (mts[i] - mod$GG * mts0) + W1
+    }else{
+      Bt[i-1]<-Ct[i-1] * mod$GG / (mod$GG * Ct[i-1] * mod$GG + Wm)
+      Lt[i]<-Cts[i] + mod$GG * Cts[i-1] * mod$GG - Cts[i] * Bt[i-1] - Bt[i-1] * Cts[i]
+      W1<-Lt[i]+(mts[i] - mod$GG * mts[i-1]) * (mts[i] - mod$GG * mts[i-1]) + W1
+    }
+  }
+  W1<-(W1+W1)/2
+  W1<-W1/mod$t
+  result[[1]]<-W1
+  return(result)
+}
+
+#----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#' Simulate the observed and true soil water content given weather data and initial soil-water condition (at time t=1)
+#'
+#' @param t_count The time period of observing weather data
+#' @param temData Weather data regarding temperature
+#' @param precData Weather data regarding precipitation
+#' @param GlobRdData Weather data regarding global radiation
+#' @param WindData Weather data regarding wind speed
+#' @param iniTrueWat An initial value for soil water content
+#' @param param Parameter values given in R function \code{setParam}
+#'
+#' @return A list containing simulated observed and true soil water content.
+#' @export
+simMois<-function(t_count, temData, precData, GlobRdData, WindData, iniTrueWat, param){
+
+  soilMoisTrue <- c()
+  soilMoisObs <- c()
+
+  weatherdata <- as.data.frame(matrix(nrow = (param$tMax+3), ncol = 5))
+  colnames(weatherdata) <- c("datetime", "Temperature",  "Precipitation", "GlobalRadiation", "WindSpeed")
+
+  Date <- matrix(nrow = (param$tMax+3), ncol = 1)
+  # 2016
+  days <- format(as.Date(seq(from=as.Date("2016-09-11"), to=as.Date("2016-10-02"), by='days')), "%m/%d/%Y")
+  # 2020
+# days <- format(as.Date(seq(from=as.Date("2020-09-11"), to=as.Date("2020-10-02"), by='days')), "%m/%d/%Y")
+  days <- gsub('(?<=\\b|-)0', '', days, perl=TRUE)
+
+  for(i in 1:(param$tMax+3)){
+    Date[i] <- as.Date(days[i+t_count],'%m/%d/%Y')
+    Date[i] <- as.numeric(Date[i])
+    weatherdata[i,1:5] <- c(Date[i], temData[i], precData[i], GlobRdData[i], WindData[i])
+  }
+
+  # 2016
+  dim <- dim(FoulumHistMetData_2012_2016)
+
+  # 2020
+# dim <- dim(FoulumHistMetData_2012_2020)
+
+  counter <- dim[1]-(param$tMax+3)+(t_count-3)
+  # 2016
+  MetData_2012_2016 <- FoulumHistMetData_2012_2016[1:counter,]
+
+  # 2020
+# MetData_2012_2020 <- FoulumHistMetData_2012_2020[1:counter,]
+
+  # 2016
+  df <- subset(MetData_2012_2016, select = -c(TempMin, TempMax))
+  df <- subset(MetData_2012_2016, select = c(Dato, Temp, Prec.B, W.m2, WV2))
+
+  #2020
+#  df <- subset(MetData_2012_2020, select = -c(TempMin, TempMax))
+#  df <- subset(MetData_2012_2020, select = c(Dato, Temp, Prec.B, W.m2, WV2))
+
+  df$Dato <- as.matrix(as.numeric(as.Date(df$Dato,'%m/%d/%Y')))
+  colnames(df) <- c("datetime","Temperature", "Precipitation", "GlobalRadiation", "WindSpeed")
+
+  weatherdata1 <- rbind(df,weatherdata)
+
+  DWF_File(weatherdata1)
+  DaisyOutputs <- Daisy(weatherdata1)
+  MeanDaisyOutputs_Sim <- Mean_Daisy(DaisyOutputs)
+  MeanDaisyOutputs_Sim$Mean_SoilWaterContent[2] <- MeanDaisyOutputs_Sim$Mean_SoilWaterContent[2]*100
+
+  dim_F <- dim(MeanDaisyOutputs_Sim$Mean_SoilWaterContent)[1]
+  dim_S <- dim_F-param$tMax
+  Sim_MW <- MeanDaisyOutputs_Sim$Mean_SoilWaterContent[dim_S:dim_F,]
+
+  for(i in 1:(param$tMax+1)){
+    soilMoisTrue[i] <- Sim_MW[i,2]
+    soilMoisObs[i] <- as.numeric(soilMoisTrue[i]) + mean(rnorm(n = 10, mean=0, sd=sqrt(param$gSSMV)))
+  }
+
+  MoisInfo<-list()
+  MoisInfo$Mean_DaisyOutputs<-MeanDaisyOutputs_Sim
+  MoisInfo$soilMoisTrue<-soilMoisTrue
+  MoisInfo$soilMoisObs<-soilMoisObs
+
+  return(MoisInfo)
+}
+
+#----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#' Simulate the weather data
+#'
+#' @param param Parameter values given in R function \code{setParam}
+#' @param coefPre Coeficiant regarding the change in precipitation
+#' @param coefTem Coeficiant regarding the change in temperature
+#' @param coefGR  Coeficiant regarding the change in global radiation
+#' @param coefWs_shape  Coeficiant regarding the change in shape of wind speed
+#' @param coefWs_scale  Coeficiant regarding the change in scale of wind speed
+#' @param rndValues A set of random values between 0 and 1 for specifying a wet and rainy day.
+#'
+#' @return A list containing simulated weather data
+#' @export
+simWeather<-function(param, coefPre, coefPre_Shape, coefPre_Scale, coefTem_Mean, coefTem_sd, coefGR_Mean,coefGR_sd, coefWs_Shape, coefWs_Scale, rndValues){
+
+  temData<-c()
+  precData<-c()
+  GlobRdData<-c()
+  WindData<-c()
+
+  probWet= coefPre
+
+  for (i in 1:(param$tMax+3)){
+    if ( probWet > rndValues[i]){
+  #   precData[i] = round(rgamma(n = 1,shape = param$precShape, scale = param$precScale),1)
+      precData[i] = round(rgamma(n = 1,shape = coefPre_Shape, scale = coefPre_Scale),1)
+    }
+    else{
+      precData[i]=0
+    }
+
+      temData[i] = round(rnorm(n = 1, mean = coefTem_Mean, sd = coefTem_sd),2)
+      GlobRdData[i] = round(rnorm(n = 1, mean = coefGR_Mean, sd = coefGR_sd),2)
+      WindData[i] = round(rweibull(n = 1, shape = coefWs_Shape, scale = coefWs_Scale),2)
+}
+
+  wedInfo<-list()
+  wedInfo$temData<-temData
+  wedInfo$precData<-precData
+  wedInfo$GlobRdData<-GlobRdData
+  wedInfo$WindData<-WindData
+  return(wedInfo)
+}
+
+#----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#' van Genuchten equation to convert matric water potential to gravimetric soil water content
+#' Van Genuchten equation can be found in \url{http://www.sciencedirect.com/science/article/pii/S0167198700001549}.
+#'
+#' @param h Matric water potential in hPa unit
+#'
+#' @return Gravimetric soil water content in cm3/cm3 unit
+#'
+#' @export
+VanGe<- function(h){
+
+  WatR<-param$hydroWatR
+  WatS<-param$hydroWatS
+
+  Theta <- (WatS-WatR)*(1+((hydroVanAlpha*h)^hydroVanN))^(1/hydroVanN-1) + WatR
+  return(Theta)
+}
+
+#----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#' power function
+#'
+#' @param x A double value
+#' @param y A double value
+#'
+#' @return a double value for power x^y
+#' @export
+pow<-function(x,y){
+  return(x^y)
+}
+
+#----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#' Function to find the index of a state given state value
+#'
+#' @param st State value
+#' @param dis A matrix containing the discritization values of a state variable
+#'
+#' @return An index related to the value of st
+#' @export
+findIndex<-function(st,dis){
+  for(i in 1:dim(dis)[1]){
+    if( ( st>=dis[i,2] ) & ( st<dis[i,3] ))
+      return(i-1)
+  }
+  cat("error in index","\n")
+  return(-1)
+}
+#----------------------------------------------------------------------------------------------------------------------------------------------------------------------
